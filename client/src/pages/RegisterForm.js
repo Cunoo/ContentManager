@@ -41,7 +41,7 @@ export default function RegisterForm() {
           <label htmlFor='username' className='block text-sm font-medium text-white'>
             Username</label>
           <input type="text" name="username" required
-            className='text-green-900 dark:bg-gray-700'
+            className='text-white dark:bg-gray-700'
           />
         </div>
         <br />
@@ -52,7 +52,7 @@ export default function RegisterForm() {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className='text-green-900 dark:bg-gray-700'
+            className='text-white dark:bg-gray-700'
           />
         </div>
         <br />
@@ -64,7 +64,7 @@ export default function RegisterForm() {
             id="confirmPassword"
             value={formData.confirmPassword}
             onChange={handleChange}
-            className='text-green-900 dark:bg-gray-700'
+            className='text-white dark:bg-gray-700'
           />
           {!isMatch && (
             <p className="text-red-500">Passwords do not match!</p>
@@ -76,7 +76,7 @@ export default function RegisterForm() {
           <label htmlFor='email' className='block text-sm font-medium text-white'>
             Email</label>
           <input type="email" name="email" required
-            className='text-green-900 dark:bg-gray-700'
+            className='text-white dark:bg-gray-700'
           />
         </div>
         <div className='pt-6'>
