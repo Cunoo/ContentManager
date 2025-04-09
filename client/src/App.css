@@ -1,9 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
 .App {
   text-align: center;
 }
 
 .App-logo {
-  height: 40vmin;
+  height: 10vmin;
   pointer-events: none;
 }
 
@@ -14,15 +20,11 @@
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  background-color: #191d23;
   color: white;
+  position:relative
 }
+
 
 .App-link {
   color: #61dafb;
@@ -35,4 +37,13 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+
+body, html {
+  background-color: #282c34;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
 }
