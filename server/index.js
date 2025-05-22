@@ -17,6 +17,8 @@ const PORT = process.env.PORT || 500
 //middleware
 app.use(cors());
 app.use(express.json()) // parse json
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
 //create postgresql pool
 
 const pool = new Pool({
@@ -104,6 +106,46 @@ app.post('/api/register', async (req, res) => {
   };
 });
 
+//Login route
+
+app.post('/api/login', async (req, res) => {
+  const {login, password} = req.body;
+
+  //validate input
+  if(!login || !password) {
+    return res.status(400).json({ error: "Login (username or email) and password are required" })
+  }
+
+  try {
+    //find user by email or username
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1 OR username = $1',
+      [login]
+    );
+    if (result.rows.length == 0) {
+      return res.status(401).json ({ error: 'Invalid credentials'});
+    }
+    const user = result.rows[0];
+    
+    //compare passwords
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid credentials'});
+    }
+    
+    //dont send the password back
+    const {password: _, ...userWithoutPassword} = user;
+    res.status(200).json({
+      message: 'Login successful',
+      user: userWithoutPassword
+    });
+
+  } catch (error) {
+      console.error('Login error', error);
+      res.status(500).json({error: 'Server error during login'});
+    }
+})
 
 
 
