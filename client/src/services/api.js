@@ -22,10 +22,21 @@ export const registerUser = async (uerData) => {
 
 //user login
 export const loginUser = async (credentials) => {
-  try {
-    const response = await api.post('/login', credentials);
-    return response.data;
-  } catch (error) {
-    throw error.response ? error.response.data : new Error('Login failed');
-  }
+    try {
+        const response = await api.post('/login', credentials);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Login failed');
+    }
+};
+
+
+//get user profile
+export const getUserProfile = async (userId) => {
+    try {
+        const response = await api.get(`/users/${userId}`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Failed to fetch user profile');
+    }
 };
