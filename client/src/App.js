@@ -1,22 +1,25 @@
+// src/App.js
 import logo from './logo.svg';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import React, { useState } from 'react';
+import React, { useContext } from 'react'; // Fixed: Added useContext import
 import { AuthProvider, AuthContext } from './context/AuthContext';
-
 
 import LoginPage from './login';
 import RegisterForm from './pages/RegisterForm';
+import Profile from './components/Profile';
+import PrivateRoute from './components/PrivateRoute';
+
 function Header() {
-  const {currentUser, logout} = useContext(AuthContext);
+  const { currentUser, logout } = useContext(AuthContext);
+
   return (
     <header className="App-header">
       <img src={logo} className="App-logo" alt="logo" height={'10px'}/>
       
       <Link to="/">
         <button
-          className=" absolute top-0 m-4
-            text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
+          className="absolute top-0 left-16 m-4 text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
         >
           Home
         </button>
@@ -88,7 +91,6 @@ function Home() {
   );
 }
 
-
 function App() {
   return (
     <AuthProvider>
@@ -110,7 +112,5 @@ function App() {
     </AuthProvider>
   );
 }
-
-export default App;
 
 export default App;
