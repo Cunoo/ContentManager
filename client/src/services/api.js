@@ -40,3 +40,16 @@ export const getUserProfile = async (userId) => {
         throw error.response ? error.response.data : new Error('Failed to fetch user profile');
     }
 };
+
+
+// Delete user
+export const deleteUser = async (userId) => {
+    try {
+        const response = await api.delete(`/users/${userId}`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Failed to delete user');
+    }
+};
+
+export default api;
