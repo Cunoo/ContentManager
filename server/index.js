@@ -340,6 +340,62 @@ app.delete('/api/users/:id', async (req, res) => {
 });
 
 
+// Update user profile
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, email } = req.body;
+    
+    if (!username && !email) {
+      return res.status(400).json({ error: 'At least one field (username or email) is required' });
+    }
+    
+    // Build dynamic query based on provided fields
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+    
+    if (username) {
+      updates.push(`username = $${paramCount++}`);
+      values.push(username);
+    }
+    
+    if (email) {
+      updates.push(`email = $${paramCount++}`);
+      values.push(email);
+    }
+    
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+    
+    const query = `
+      UPDATE users 
+      SET ${updates.join(', ')} 
+      WHERE id = $${paramCount} 
+      RETURNING id, username, email, created_at, updated_at
+    `;
+    
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.status(200).json({
+      message: 'User updated successfully',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    if (error.code === '23505') { // Unique constraint violation
+      res.status(409).json({ error: 'Username or email already exists' });
+    } else {
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+});
+
+
 
 const server = createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
