@@ -1,19 +1,19 @@
 // server.mjs
 import express from 'express';
 import cors from 'cors';
-import { Pool } from 'pg'; // Fixed: was 'ool' instead of 'Pool'
+import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000; // Fixed: was 500 instead of 5000
+const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // parse json
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Create postgresql pool
 const pool = new Pool({
@@ -24,9 +24,30 @@ const pool = new Pool({
   port: process.env.DB_PORT || 5432
 });
 
+// Test database connection
+const testConnection = async () => {
+  try {
+    const client = await pool.connect();
+    console.log('✅ Database connected successfully');
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.error('Please check your database credentials in .env file');
+    return false;
+  }
+};
+
 // Init db
 const initDB = async () => {
   try {
+    // Test connection first
+    const connected = await testConnection();
+    if (!connected) {
+      console.error('⚠️  Continuing without database connection...');
+      return;
+    }
+
     // Create users table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -38,23 +59,28 @@ const initDB = async () => {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Database initialized successfully');
+    console.log('✅ Database initialized successfully');
   } catch (error) {
-    console.error('Error initializing database:', error);
-    process.exit(1);
+    console.error('❌ Error initializing database:', error.message);
+    console.error('⚠️  Server will continue but database features won\'t work');
   }
 };
 
+// Initialize database
 initDB();
 
-// Routes
+// Routes - Define them in specific order (most specific first)
+
+// Home route
 app.get('/', (req, res) => {
   res.json({ 
     message: 'User Registration API Server',
+    status: 'Running ✅',
     endpoints: {
       register: 'POST /api/register',
       login: 'POST /api/login',
-      profile: 'GET /api/users/:id',
+      getAllUsers: 'GET /api/users',
+      getUserById: 'GET /api/users/:id',
       updateUser: 'PUT /api/users/:id',
       deleteUser: 'DELETE /api/users/:id'
     }
@@ -63,14 +89,28 @@ app.get('/', (req, res) => {
 
 // Register new user
 app.post('/api/register', async (req, res) => {
-  const { username, email, password } = req.body;
-
-  // Validate input
-  if (!username || !email || !password) {
-    return res.status(400).json({ error: "All fields are required" });
-  }
-
   try {
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('Content-Type:', req.get('Content-Type'));
+    const { username, email, password } = req.body;
+
+    // Validate input
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address" });
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+    }
+
     // Check if user already exists
     const userCheck = await pool.query(
       'SELECT * FROM users WHERE username = $1 OR email = $2',
@@ -78,46 +118,47 @@ app.post('/api/register', async (req, res) => {
     );
 
     if (userCheck.rows.length > 0) {
-      return res.status(409).json({ error: 'Username or email already exists' }); // Fixed: changed from 400 to 409
+      return res.status(409).json({ error: 'Username or email already exists' });
     }
 
     // Hash password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Insert new user - Fixed SQL syntax error
+    // Insert new user
     const result = await pool.query(
       'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email, created_at',
       [username, email, hashedPassword]
     );
 
     res.status(201).json({
-      message: 'User registered successfully', // Fixed typo: 'succesfully' -> 'successfully'
+      message: 'User registered successfully',
       user: result.rows[0]
     });
+
   } catch (error) {
-    console.error("Registration errors:", error);
+    console.error("Registration error:", error);
     res.status(500).json({ error: "Server error during registration" });
   }
 });
 
 // Login route
 app.post('/api/login', async (req, res) => {
-  const { login, password } = req.body;
-
-  // Validate input
-  if (!login || !password) {
-    return res.status(400).json({ error: "Login (username or email) and password are required" });
-  }
-
   try {
+    const { login, password } = req.body;
+
+    // Validate input
+    if (!login || !password) {
+      return res.status(400).json({ error: "Login (username or email) and password are required" });
+    }
+
     // Find user by email or username
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1 OR username = $1',
       [login]
     );
 
-    if (result.rows.length === 0) { // Fixed: changed == to ===
+    if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -132,38 +173,19 @@ app.post('/api/login', async (req, res) => {
     
     // Don't send the password back
     const { password: _, ...userWithoutPassword } = user;
+    
     res.status(200).json({
       message: 'Login successful',
       user: userWithoutPassword
     });
 
   } catch (error) {
-    console.error('Login error:', error); // Fixed: added colon
+    console.error('Login error:', error);
     res.status(500).json({ error: 'Server error during login' });
   }
 });
 
-// Get user profile
-app.get('/api/users/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query(
-      'SELECT id, username, email, created_at FROM users WHERE id = $1',
-      [id]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    res.status(200).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Get all users (optional - for testing)
+// Get all users
 app.get('/api/users', async (req, res) => {
   try {
     const result = await pool.query(
@@ -181,17 +203,59 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// Get user profile by ID
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Validate ID
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    const result = await pool.query(
+      'SELECT id, username, email, created_at FROM users WHERE id = $1',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.status(200).json({
+      message: 'User retrieved successfully',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Update user profile
 app.put('/api/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { username, email } = req.body;
     
+    // Validate ID
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    
     if (!username && !email) {
       return res.status(400).json({ error: 'At least one field (username or email) is required' });
     }
     
-    // Build dynamic query based on provided fields
+    // Validate email if provided
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Please enter a valid email address" });
+      }
+    }
+    
+    // Build dynamic query
     const updates = [];
     const values = [];
     let paramCount = 1;
@@ -228,7 +292,7 @@ app.put('/api/users/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating user:', error);
-    if (error.code === '23505') { // Unique constraint violation
+    if (error.code === '23505') {
       res.status(409).json({ error: 'Username or email already exists' });
     } else {
       res.status(500).json({ error: 'Server error' });
@@ -240,6 +304,12 @@ app.put('/api/users/:id', async (req, res) => {
 app.delete('/api/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate ID
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
     const result = await pool.query(
       'DELETE FROM users WHERE id = $1 RETURNING id, username, email',
       [id]
@@ -265,12 +335,27 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Handle 404 for undefined routes
-app.all('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+// 404 handler
+app.use(function(req, res) {
+  res.status(404).json({ 
+    error: 'Route not found',
+    message: `Cannot ${req.method} ${req.path}`,
+    availableRoutes: [
+      'GET /',
+      'POST /api/register',
+      'POST /api/login',
+      'GET /api/users',
+      'GET /api/users/:id',
+      'PUT /api/users/:id',
+      'DELETE /api/users/:id'
+    ]
+  });
 });
 
-// Start the Express server (removed the conflicting native HTTP server)
+// Start server
 app.listen(PORT, '127.0.0.1', () => {
-  console.log(`User Registration API Server listening on 127.0.0.1:${PORT}`);
+  console.log(`🚀 User Registration API Server is running!`);
+  console.log(`📡 Server: http://127.0.0.1:${PORT}`);
+  console.log(`📖 API Documentation: http://127.0.0.1:${PORT}`);
+  console.log(`⏰ Started at: ${new Date().toLocaleString()}`);
 });
