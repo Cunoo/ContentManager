@@ -57,7 +57,7 @@ function LoginPage() {
             value={formData.login}
             onChange={handleChange}
             required
-            className='text-green-900 dark:bg-gray-700 p-2 rounded w-full'
+            className='text-white dark:bg-gray-700'
             placeholder="Enter your username or email"
           />
         </div>
@@ -73,7 +73,7 @@ function LoginPage() {
             value={formData.password}
             onChange={handleChange}
             required
-            className='text-green-900 dark:bg-gray-700 p-2 rounded w-full'
+            className='text-white dark:bg-gray-700'
           />
         </div>
 
