@@ -5,10 +5,18 @@ import { readFile } from 'node:fs/promises';
 import { ool } from 'pg';
 import bcrypt from 'bcrypt'
 import dotenv from 'dotenv'
+import express from 'express';
+import cors from 'cors';
+
 
 dotenv.config();
 
+const app = express()
+const PORT = process.env.PORT || 500
 
+//middleware
+app.use(cors());
+app.use(express.json()) // parse json
 //create postgresql pool
 
 const pool = new Pool({
@@ -41,6 +49,19 @@ const initDB = async () => {
 };
 
 initDB();
+
+//Routes
+
+app.get('/', (req, res)) => {
+  res.json({
+    message: 'User Registration API Server',
+    endpoints: {
+      register: 'POST /api/register',
+      login: 'POST /api/login',
+      profile: 'GET /api/users/:id'
+    }
+  })
+}
 
 
 
