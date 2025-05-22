@@ -395,7 +395,17 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
+//error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error'});
 
+});
+
+//Handle 404 or undefined routes
+app.use('*', (req, res) => {
+  res.status(404).json({error: 'Route not found'})
+})
 
 const server = createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
