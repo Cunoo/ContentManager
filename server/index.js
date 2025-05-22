@@ -52,16 +52,60 @@ initDB();
 
 //Routes
 
-app.get('/', (req, res)) => {
-  res.json({
+app.get('/', (req, res) => {
+  res.json({ 
     message: 'User Registration API Server',
     endpoints: {
       register: 'POST /api/register',
       login: 'POST /api/login',
       profile: 'GET /api/users/:id'
     }
-  })
-}
+  });
+});
+
+
+//register new user
+
+app.post('/api/register', async (req, res) => {
+  const {username, email, password} = req.body;
+
+  //validate input
+  if(!username || !email || !password) {
+    return res.status(400).json({ error: "All fields are required" })
+  }
+
+  try {
+    //check if user already exists
+    const userCheck = await pool.query(
+      'SELECT * FROM users WHERE username = $1 OR email=$2',
+      [username, email]
+    );
+
+    if (userCheck.rows.length > 0) {
+      return res.status(400).json({error: 'Username or email already exists'});
+    }
+
+    //Hash password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    //insert new user
+    const result = await pool.query(
+      'INSERT INTO users (username, email, password VALUES ($1, $2, $3) RETURNING id, username, email, created_at',
+      [username, email, hashedPassword]
+    );
+    res.status(201).json({
+      message: 'User registered succesfully',
+      user: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Registration errors:", error);
+    res.status(500).json({error: "Server error during registration"});
+  };
+});
+
+
+
 
 
 
