@@ -5,10 +5,11 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import React, { useContext } from 'react'; // Fixed: Added useContext import
 import { AuthProvider, AuthContext } from './context/AuthContext';
 
-import LoginPage from './login';
+import LoginPage from './pages/login';
 import RegisterForm from './pages/RegisterForm';
 import Profile from './components/Profile';
 import PrivateRoute from './components/PrivateRoute';
+import Calendar from './pages/calendar';
 
 function Header() {
   const { currentUser, logout } = useContext(AuthContext);
@@ -22,6 +23,13 @@ function Header() {
           className="absolute top-0 left-16 m-4 text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
         >
           Home
+        </button>
+      </Link>
+            <Link to="/calendar">
+        <button
+          className=" top-0 left-16 m-4 text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
+        >
+          Calendar
         </button>
       </Link>
 
@@ -58,9 +66,9 @@ function Home() {
   return (
     <div className="text-center p-8">
       <h1 className="text-4xl font-bold text-white mb-4">
-        Welcome to User Registration System
+        Your only content manager that you need
       </h1>
-      <p className="text-gray-300 mb-8">A secure system to manage user accounts</p>
+      
       
       {!currentUser ? (
         <div className="space-x-4">
@@ -101,9 +109,11 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterForm/>} />
+            <Route path="/calendar" element={<Calendar />} />
             <Route path="/profile" element={
               <PrivateRoute>
                 <Profile />
+                
               </PrivateRoute>
             } />
           </Routes>

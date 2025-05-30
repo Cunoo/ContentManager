@@ -11,6 +11,7 @@
     "formik": "^2.4.6",
     "postcss-import": "^16.1.0",
     "react": "^19.1.0",
+    "react-big-calendar": "^1.19.2",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.30.0",
     "react-scripts": "5.0.1",
