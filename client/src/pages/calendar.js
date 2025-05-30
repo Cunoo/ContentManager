@@ -10,31 +10,35 @@ import 'moment/locale/en-gb'; // or your preferred locale
 moment.locale('en'); // Set default locale
 const localizer = momentLocalizer(moment);
 
-// Sample events data with precise times
+// Sample events data with specific times (no duration)
 const myEventsList = [
   {
     id: 0,
-    title: 'Morning Meeting',
-    start: new Date(2025, 4, 29, 9, 15, 0), // Today at 9:15 AM
-    end: new Date(2025, 4, 29, 10, 45, 0), // Today at 10:45 AM
+    title: 'Send Report',
+    start: new Date(2025, 4, 29, 9, 0, 0),
+    end: new Date(2025, 4, 29, 9, 0, 0), // Same time as start
+    resource: 'point-in-time'
   },
   {
     id: 1,
-    title: 'Coffee Break',
-    start: new Date(2025, 4, 29, 10, 45, 0), // Today at 10:45 AM
-    end: new Date(2025, 4, 29, 11, 0, 0), // Today at 11:00 AM
+    title: 'Check Status',
+    start: new Date(2025, 4, 29, 14, 30, 0),
+    end: new Date(2025, 4, 29, 14, 30, 0), // Same time as start
+    resource: 'point-in-time'
   },
   {
     id: 2,
-    title: 'Project Review',
-    start: new Date(2025, 4, 29, 14, 30, 0), // Today at 2:30 PM
-    end: new Date(2025, 4, 29, 16, 15, 0), // Today at 4:15 PM
+    title: 'Daily Notification',
+    start: new Date(2025, 4, 30, 10, 15, 0),
+    end: new Date(2025, 4, 30, 10, 15, 0), // Same time as start
+    resource: 'point-in-time'
   },
   {
     id: 3,
-    title: 'Team Call',
-    start: new Date(2025, 4, 29, 16, 30, 0), // Today at 4:30 PM
-    end: new Date(2025, 4, 29, 17, 0, 0), // Today at 5:00 PM
+    title: 'Backup Data',
+    start: new Date(2025, 4, 30, 18, 0, 0),
+    end: new Date(2025, 4, 30, 18, 0, 0), // Same time as start
+    resource: 'point-in-time'
   },
 ];
 
@@ -102,9 +106,9 @@ const MyCalendar = (props) => {
       return;
     }
 
-    // Create the event time (same start and end time for point-in-time events)
+    // Create the event time (exact same start and end time)
     const eventTime = moment(date).hour(hours).minute(minutes).second(0).toDate();
-    const eventEndTime = moment(eventTime).add(1, 'minute').toDate(); // Just 1 minute for minimal display
+    const eventEndTime = eventTime; // Exact same time, no duration
 
     // Add the event
     setEvents([
@@ -135,6 +139,111 @@ const MyCalendar = (props) => {
 
   return (
     <div className="myCustomHeight text-white dark:bg-gray-700" style={{ height: '700px' }}>
+      <style>
+        {`
+          /* Make all days look the same */
+          .rbc-today {
+            background-color: inherit !important;
+          }
+          
+          /* Remove current time indicator */
+          .rbc-current-time-indicator {
+            display: none !important;
+          }
+          
+          /* Simplify time slot lines - show only major hour lines */
+          .rbc-time-slot {
+            border-top: none !important;
+          }
+          
+          .rbc-timeslot-group {
+            border-bottom: 1px solid #ddd !important;
+          }
+          
+          /* Remove weekend highlighting */
+          .rbc-off-range-bg {
+            background-color: white !important;
+          }
+          
+          /* Consistent header styling */
+          .rbc-header {
+            background-color: #f8f9fa !important;
+            border-bottom: 1px solid #ddd !important;
+            position: relative !important;
+          }
+          
+          /* Style for day names in week view headers */
+          .rbc-header::before {
+            content: attr(data-day-name);
+            display: block;
+            font-weight: bold;
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 4px;
+          }
+          
+          /* Clean time slot appearance */
+          .rbc-day-slot .rbc-time-slot {
+            background-color: white !important;
+          }
+          
+          /* Hide minor time slot borders */
+          .rbc-time-content > * > * {
+            border-top: none !important;
+          }
+          
+          /* Show time gutter with hour labels */
+          .rbc-time-gutter {
+            background-color: #f8f9fa !important;
+            border-right: 1px solid #ddd !important;
+            width: 80px !important;
+          }
+          
+          .rbc-time-gutter .rbc-timeslot-group {
+            background-color: #f8f9fa !important;
+          }
+          
+          /* Style hour labels */
+          .rbc-time-gutter .rbc-label {
+            color: #495057 !important;
+            font-weight: 500 !important;
+            font-size: 12px !important;
+            padding-right: 8px !important;
+            text-align: right !important;
+          }
+
+          /* Enhanced styling for week view day names */
+          .rbc-time-header .rbc-header {
+            padding: 8px 4px !important;
+            text-align: center !important;
+            min-height: 60px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+          }
+
+          /* Add day names for week view */
+          .rbc-time-view .rbc-header {
+            position: relative;
+          }
+
+          .rbc-time-view .rbc-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+          }
+
+          /* Style the date numbers to be more prominent */
+          .rbc-time-view .rbc-header {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+          }
+        `}
+      </style>
       {/* Custom Toolbar */}
       <div style={{ 
         display: 'flex', 
@@ -269,10 +378,15 @@ const MyCalendar = (props) => {
         toolbar={false}
         formats={{
           timeGutterFormat: 'h:mm A',
+          dayHeaderFormat: (date, culture, localizer) => {
+            // Custom format for week view headers to show day name + date
+            const dayName = localizer.format(date, 'dddd', culture);
+            const dateNum = localizer.format(date, 'D', culture);
+            return `${dayName}\n${dateNum}`;
+          },
           eventTimeRangeFormat: ({ start, end }, culture, localizer) => {
-            // Check if this is a point-in-time event (1 minute difference)
-            const duration = moment(end).diff(moment(start), 'minutes');
-            if (duration <= 1) {
+            // Check if this is a point-in-time event (same start and end time)
+            if (moment(start).isSame(moment(end))) {
               return localizer.format(start, 'h:mm A', culture); // Show only start time
             }
             return localizer.format(start, 'h:mm A', culture) + ' - ' + 
