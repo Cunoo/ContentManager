@@ -1,6 +1,7 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import { Calendar, momentLocalizer} from 'react-big-calendar';
 import moment from 'moment';
+import { AuthContext } from '../context/AuthContext'; // Import your AuthContext
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'moment/locale/en-gb';
@@ -11,62 +12,20 @@ const localizer = momentLocalizer(moment);
 // Updated to match your server URL and port
 const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
-// API functions updated for your server response format
+// API functions updated for your server response format with enhanced debugging
 const api = {
-    // User Authentication APIs
-    register: async (userData) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/register`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to register');
-            }
-            const data = await response.json();
-            return data.user;
-        } catch (error) {
-            console.error('Error registering user:', error);
-            throw error;
-        }
-    },
-
-    login: async (loginData) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(loginData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to login');
-            }
-            const data = await response.json();
-            return data.user;
-        } catch (error) {
-            console.error('Error logging in:', error);
-            throw error;
-        }
-    },
-
     // Get all events from backend
     getEvents: async () => {
         try {
+            console.log('📅 GET EVENTS API - Fetching all events');
             const response = await fetch(`${API_BASE_URL}/events`);
             if (!response.ok) throw new Error('Failed to fetch events');
             const data = await response.json();
+            console.log('📅 GET EVENTS API - Response:', data);
+            console.log('📅 GET EVENTS API - Events count:', data.events?.length || 0);
             return data.events || [];
         } catch (error) {
-            console.error('Error fetching events:', error);
+            console.error('📅 GET EVENTS API - Error:', error);
             return [];
         }
     },
@@ -74,19 +33,28 @@ const api = {
     // Get events for specific user
     getUserEvents: async (userId) => {
         try {
+            console.log('👤 GET USER EVENTS API - User ID:', userId, 'Type:', typeof userId);
             const response = await fetch(`${API_BASE_URL}/users/${userId}/events`);
             if (!response.ok) throw new Error('Failed to fetch user events');
             const data = await response.json();
+            console.log('👤 GET USER EVENTS API - Response:', data);
+            console.log('👤 GET USER EVENTS API - Events count:', data.events?.length || 0);
             return data.events || [];
         } catch (error) {
-            console.error('Error fetching user events:', error);
+            console.error('👤 GET USER EVENTS API - Error:', error);
             return [];
         }
     },
 
-    // Create new event
+    // Create new event - ENHANCED WITH DEBUGGING
     createEvent: async (eventData) => {
         try {
+            console.log('=== 🆕 CREATE EVENT API DEBUG START ===');
+            console.log('📤 Sending event data:', JSON.stringify(eventData, null, 2));
+            console.log('📤 User ID being sent:', eventData.user_id);
+            console.log('📤 User ID type:', typeof eventData.user_id);
+            console.log('📤 Event data keys:', Object.keys(eventData));
+            
             const response = await fetch(`${API_BASE_URL}/events`, {
                 method: 'POST',
                 headers: {
@@ -95,14 +63,32 @@ const api = {
                 body: JSON.stringify(eventData)
             });
             
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            const responseText = await response.text();
+            console.log('📡 Raw response text:', responseText);
+            
             if (!response.ok) {
-                const errorData = await response.json();
+                let errorData;
+                try {
+                    errorData = JSON.parse(responseText);
+                } catch (e) {
+                    errorData = { error: responseText };
+                }
+                console.error('❌ CREATE EVENT API - Server error:', errorData);
                 throw new Error(errorData.error || 'Failed to create event');
             }
-            const data = await response.json();
+            
+            const data = JSON.parse(responseText);
+            console.log('✅ CREATE EVENT API - Success response:', data);
+            console.log('✅ Created event user_id:', data.event?.user_id);
+            console.log('✅ Created event user_id type:', typeof data.event?.user_id);
+            console.log('=== 🆕 CREATE EVENT API DEBUG END ===');
+            
             return data.event;
         } catch (error) {
-            console.error('Error creating event:', error);
+            console.error('💥 CREATE EVENT API - Exception:', error);
             throw error;
         }
     },
@@ -110,6 +96,7 @@ const api = {
     // Update existing event
     updateEvent: async (eventId, eventData) => {
         try {
+            console.log('✏️ UPDATE EVENT API - ID:', eventId, 'Data:', eventData);
             const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
                 method: 'PUT',
                 headers: {
@@ -120,12 +107,14 @@ const api = {
             
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('✏️ UPDATE EVENT API - Error:', errorData);
                 throw new Error(errorData.error || 'Failed to update event');
             }
             const data = await response.json();
+            console.log('✏️ UPDATE EVENT API - Success:', data);
             return data.event;
         } catch (error) {
-            console.error('Error updating event:', error);
+            console.error('✏️ UPDATE EVENT API - Exception:', error);
             throw error;
         }
     },
@@ -133,17 +122,20 @@ const api = {
     // Delete event
     deleteEvent: async (eventId) => {
         try {
+            console.log('🗑️ DELETE EVENT API - ID:', eventId);
             const response = await fetch(`${API_BASE_URL}/events/${eventId}`, {
                 method: 'DELETE'
             });
             
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('🗑️ DELETE EVENT API - Error:', errorData);
                 throw new Error(errorData.error || 'Failed to delete event');
             }
+            console.log('🗑️ DELETE EVENT API - Success');
             return true;
         } catch (error) {
-            console.error('Error deleting event:', error);
+            console.error('🗑️ DELETE EVENT API - Exception:', error);
             throw error;
         }
     }
@@ -154,12 +146,21 @@ const MyCalendar = (props) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [currentView, setCurrentView] = useState('day');
     const [loading, setLoading] = useState(false);
-    
-    // User authentication state
-    const [currentUser, setCurrentUser] = useState(null);
     const [showUserEvents, setShowUserEvents] = useState(false);
-    const [showAuthModal, setShowAuthModal] = useState(false);
-    const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+
+    // 🔧 USE AUTH CONTEXT INSTEAD OF LOCAL STATE
+    const { currentUser, login, logout } = useContext(AuthContext);
+
+    // Debug current user state whenever it changes
+    useEffect(() => {
+        console.log('=== 👤 USER STATE CHANGE (FROM CONTEXT) ===');
+        console.log('Current user:', currentUser);
+        console.log('User ID:', currentUser?.id);
+        console.log('User ID type:', typeof currentUser?.id);
+        console.log('Username:', currentUser?.username);
+        console.log('Show user events:', showUserEvents);
+        console.log('=== END USER STATE ===');
+    }, [currentUser, showUserEvents]);
 
     // Helper functions
     const getCurrentHour = () => {
@@ -180,101 +181,98 @@ const MyCalendar = (props) => {
     }, [showUserEvents, currentUser]);
 
     const loadEventsFromBackEnd = async () => {
+        console.log('=== 🔄 LOADING EVENTS ===');
+        console.log('Show user events:', showUserEvents);
+        console.log('Current user:', currentUser);
+        
         setLoading(true);
         try {
             let backendEvents;
             
             if (showUserEvents && currentUser) {
+                console.log('Loading events for user:', currentUser.id);
                 backendEvents = await api.getUserEvents(currentUser.id);
                 console.log(`Loaded ${backendEvents.length} events for user ${currentUser.username}`);
             } else {
+                console.log('Loading all events');
                 backendEvents = await api.getEvents();
                 console.log('Loaded all events from server:', backendEvents.length);
             }
 
             // Transformation backend data to calendar format
-            const transformedEvents = backendEvents.map(event => ({
-                id: event.id,
-                title: event.title,
-                start: new Date(event.start_time),
-                end: new Date(event.end_time),
-                resource: event.resource || 'point-in-time',
-                description: event.description,
-                username: event.username,
-                userId: event.user_id
-            }));
+            const transformedEvents = backendEvents.map(event => {
+                console.log('Transforming event:', event);
+                return {
+                    id: event.id,
+                    title: event.title,
+                    start: new Date(event.start_time),
+                    end: new Date(event.end_time),
+                    resource: event.resource || 'point-in-time',
+                    description: event.description,
+                    username: event.username,
+                    userId: event.user_id
+                };
+            });
+            
             setEvents(transformedEvents);
-            console.log(`Successfully loaded ${transformedEvents.length} events`);
+            console.log(`✅ Successfully loaded ${transformedEvents.length} events`);
+            console.log('Events with user_id:', transformedEvents.filter(e => e.userId).length);
+            console.log('Events without user_id:', transformedEvents.filter(e => !e.userId).length);
+            console.log('=== END LOADING EVENTS ===');
         } catch (error) {
-            console.error("Failed to load events:", error);
+            console.error("❌ Failed to load events:", error);
             alert('Failed to load events from server. Please make sure the server is running on http://127.0.0.1:5000');
         } finally {
             setLoading(false);
         }
     };
 
-    // Authentication functions
-    const handleLogin = async (loginData) => {
-        try {
-            setLoading(true);
-            const user = await api.login(loginData);
-            setCurrentUser(user);
-            setShowAuthModal(false);
-            console.log('User logged in:', user);
-            alert(`Welcome back, ${user.username}!`);
-        } catch (error) {
-            alert(`Login failed: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleRegister = async (userData) => {
-        try {
-            setLoading(true);
-            const user = await api.register(userData);
-            setCurrentUser(user);
-            setShowAuthModal(false);
-            console.log('User registered:', user);
-            alert(`Welcome, ${user.username}! You have been registered successfully.`);
-        } catch (error) {
-            alert(`Registration failed: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // 🔧 SIMPLIFIED LOGOUT - USE CONTEXT
     const handleLogout = () => {
-        setCurrentUser(null);
+        console.log('🚪 User logging out');
+        logout(); // Use context logout
         setShowUserEvents(false);
         loadEventsFromBackEnd(); // Reload all events
         alert('You have been logged out.');
     };
 
-    // Enhanced event handler with user_id integration
+    // Enhanced event handler with user_id integration and EXTENSIVE DEBUGGING
     const handleSelectSlot = async ({ start, end }) => {
+        console.log('=== 🎯 HANDLE SELECT SLOT DEBUG START ===');
+        console.log('Current user from context:', currentUser);
+        console.log('Current user ID:', currentUser?.id);
+        console.log('Current user ID type:', typeof currentUser?.id);
+        
         const title = window.prompt('New Event name');
-        if (!title) return;
+        if (!title) {
+            console.log('❌ No title provided, canceling event creation');
+            return;
+        }
 
         const description = window.prompt('Event description (optional):') || '';
 
         setLoading(true);
         try {
-            // Prepare event data for backend - NOW WITH USER_ID!
+            // Prepare event data for backend - NOW WITH USER_ID FROM CONTEXT!
             const eventData = {
                 title: title,
                 start_time: start.toISOString(),
                 end_time: start.toISOString(), // Same as start for point-in-time events
                 description: description,
                 resource: 'point-in-time',
-                user_id: currentUser ? currentUser.id : null // AUTOMATICALLY ADD USER_ID!
+                user_id: currentUser ? currentUser.id : null // USE CONTEXT USER_ID!
             };
 
-            console.log('Sending event data to server with user_id:', eventData);
+            console.log('📤 Prepared event data:', JSON.stringify(eventData, null, 2));
+            console.log('📤 User ID being sent:', eventData.user_id);
+            console.log('📤 User ID type:', typeof eventData.user_id);
+            console.log('📤 Current user object from context:', currentUser);
 
             // Send to backend
+            console.log('🚀 Sending event to backend...');
             const savedEvent = await api.createEvent(eventData);
-            console.log('Event saved to database with user_id:', savedEvent);
+            console.log('✅ Event saved to database:', savedEvent);
+            console.log('✅ Saved event user_id:', savedEvent.user_id);
 
             // Add to local state with backend data
             const newEvent = {
@@ -287,14 +285,16 @@ const MyCalendar = (props) => {
                 userId: savedEvent.user_id
             };
 
+            console.log('📋 Adding event to local state:', newEvent);
             setEvents([...events, newEvent]);
 
             const startTime = moment(start).format('h:mm A');
             const userInfo = currentUser ? ` (assigned to ${currentUser.username})` : ' (no user assigned)';
-            console.log(`Event "${title}" saved to database at ${startTime}${userInfo}`);
+            console.log(`✅ Event "${title}" saved to database at ${startTime}${userInfo}`);
             alert(`Event "${title}" created successfully${userInfo}!`);
+            console.log('=== 🎯 HANDLE SELECT SLOT DEBUG END ===');
         } catch (error) {
-            console.error('Error saving event:', error);
+            console.error('💥 Error saving event:', error);
             alert(`Failed to save event: ${error.message}`);
         } finally {
             setLoading(false);
@@ -302,6 +302,12 @@ const MyCalendar = (props) => {
     };
 
     const handleSelectEvent = async (event) => {
+        console.log('=== 🔍 EVENT SELECTED ===');
+        console.log('Selected event:', event);
+        console.log('Event user ID:', event.userId);
+        console.log('Event username:', event.username);
+        console.log('=== END EVENT SELECTED ===');
+        
         const startTime = moment(event.start).format('dddd, MMMM Do YYYY, h:mm A');
         let eventDetails = `${event.title}\nTime: ${startTime}`;
         
@@ -323,10 +329,10 @@ const MyCalendar = (props) => {
             try {
                 await api.deleteEvent(event.id);
                 setEvents(events.filter(e => e.id !== event.id));
-                console.log(`Event "${event.title}" deleted from database`);
+                console.log(`✅ Event "${event.title}" deleted from database`);
                 alert(`Event "${event.title}" deleted successfully!`);
             } catch (error) {
-                console.error('Error deleting event:', error);
+                console.error('❌ Error deleting event:', error);
                 alert(`Failed to delete event: ${error.message}`);
             } finally {
                 setLoading(false);
@@ -343,6 +349,10 @@ const MyCalendar = (props) => {
     };
 
     const handleScheduleEvent = async () => {
+        console.log('=== 📅 HANDLE SCHEDULE EVENT DEBUG START ===');
+        console.log('Current user from context:', currentUser);
+        console.log('Current user ID:', currentUser?.id);
+        
         const title = window.prompt('Event title:');
         if (!title) return;
 
@@ -372,21 +382,23 @@ const MyCalendar = (props) => {
 
         setLoading(true);
         try {
-            // Prepare data for backend - NOW WITH USER_ID!
+            // Prepare data for backend - NOW WITH USER_ID FROM CONTEXT!
             const eventData = {
                 title: title,
                 start_time: eventTime.toISOString(),
                 end_time: eventTime.toISOString(),
                 description: description,
                 resource: 'point-in-time',
-                user_id: currentUser ? currentUser.id : null // AUTOMATICALLY ADD USER_ID!
+                user_id: currentUser ? currentUser.id : null // USE CONTEXT USER_ID!
             };
 
-            console.log('Sending scheduled event data to server with user_id:', eventData);
+            console.log('📤 Scheduled event data:', JSON.stringify(eventData, null, 2));
+            console.log('📤 User ID being sent:', eventData.user_id);
+            console.log('📤 User ID type:', typeof eventData.user_id);
 
             // Send to backend
             const savedEvent = await api.createEvent(eventData);
-            console.log('Scheduled event saved to database with user_id:', savedEvent);
+            console.log('✅ Scheduled event saved to database:', savedEvent);
 
             // Add to local state
             const newEvent = {
@@ -405,9 +417,10 @@ const MyCalendar = (props) => {
             const timeFormatted = moment(eventTime).format('dddd, MMMM Do YYYY, h:mm A');
             const userInfo = currentUser ? ` (assigned to ${currentUser.username})` : ' (no user assigned)';
             alert(`Event "${title}" saved to database at: ${timeFormatted}${userInfo}`);
+            console.log('=== 📅 HANDLE SCHEDULE EVENT DEBUG END ===');
 
         } catch (error) {
-            console.error('Error saving scheduled event:', error);
+            console.error('💥 Error saving scheduled event:', error);
             alert(`Failed to save event: ${error.message}`);
         } finally {
             setLoading(false);
@@ -417,44 +430,43 @@ const MyCalendar = (props) => {
     // Test server connection
     const testServerConnection = async () => {
         try {
+            console.log('🔍 Testing server connection...');
             const response = await fetch(`${API_BASE_URL.replace('/api', '')}/api/health`);
             if (response.ok) {
                 const data = await response.json();
+                console.log('✅ Server health check:', data);
                 alert(`Server Status: ${data.status}\nDatabase: ${data.database}\nTime: ${data.timestamp}`);
             } else {
                 throw new Error('Server not responding');
             }
         } catch (error) {
+            console.error('❌ Server connection failed:', error);
             alert('Cannot connect to server. Please make sure your server is running on http://127.0.0.1:5000');
         }
     };
 
-    // Quick login for testing (you can remove this in production)
-    const handleQuickLogin = () => {
-        const username = window.prompt('Enter username to login:');
-        if (!username) return;
+    // Debug function to show current state
+    const showDebugInfo = () => {
+        console.log('=== 🐛 DEBUG INFO ===');
+        console.log('Current user from context:', currentUser);
+        console.log('Current user ID:', currentUser?.id);
+        console.log('Current user ID type:', typeof currentUser?.id);
+        console.log('Events count:', events.length);
+        console.log('Events with user_id:', events.filter(e => e.userId).length);
+        console.log('Events without user_id:', events.filter(e => !e.userId).length);
+        console.log('Show user events:', showUserEvents);
+        console.log('All events:', events);
+        console.log('=== END DEBUG INFO ===');
         
-        const password = window.prompt('Enter password:');
-        if (!password) return;
+        alert(`Debug Info:
+Current User: ${currentUser?.username || 'Not logged in'}
+User ID: ${currentUser?.id || 'N/A'} (${typeof currentUser?.id})
+Total Events: ${events.length}
+Events with User ID: ${events.filter(e => e.userId).length}
+Events without User ID: ${events.filter(e => !e.userId).length}
+Show User Events: ${showUserEvents}
 
-        handleLogin({ login: username, password });
-    };
-
-    // Quick register for testing (you can remove this in production)
-    const handleQuickRegister = () => {
-        const username = window.prompt('Enter new username:');
-        if (!username) return;
-        
-        const email = window.prompt('Enter email:');
-        if (!email) return;
-        
-        const password = window.prompt('Enter password (min 6 characters):');
-        if (!password || password.length < 6) {
-            alert('Password must be at least 6 characters long');
-            return;
-        }
-
-        handleRegister({ username, email, password });
+Check console for detailed logs!`);
     };
 
     return (
@@ -599,6 +611,18 @@ const MyCalendar = (props) => {
                     background-color: #6c757d !important;
                     border-color: #6c757d !important;
                 }
+
+                /* Debug button styling */
+                .debug-button {
+                    background-color: #ff6b35 !important;
+                    animation: pulse 2s infinite;
+                }
+
+                @keyframes pulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.7; }
+                    100% { opacity: 1; }
+                }
                 `}
             </style>
             
@@ -652,38 +676,30 @@ const MyCalendar = (props) => {
                         🔄 Refresh
                     </button>
                     
-                    {/* User Authentication Buttons */}
+                    {/* DEBUG BUTTON - HIGHLY VISIBLE */}
+                    <button 
+                        onClick={showDebugInfo}
+                        className="debug-button"
+                        style={{ 
+                            marginRight: '8px', 
+                            padding: '8px 15px',
+                            backgroundColor: '#ff6b35',
+                            color: 'white',
+                            border: '2px solid #ff4500',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '14px'
+                        }}
+                    >
+                        🐛 DEBUG INFO
+                    </button>
+                    
+                    {/* SIMPLIFIED AUTH BUTTONS - USE CONTEXT */}
                     {!currentUser ? (
-                        <>
-                            <button 
-                                onClick={handleQuickLogin}
-                                style={{ 
-                                    marginRight: '8px', 
-                                    padding: '8px 15px',
-                                    backgroundColor: '#007bff',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                👤 Login
-                            </button>
-                            <button 
-                                onClick={handleQuickRegister}
-                                style={{ 
-                                    marginRight: '8px', 
-                                    padding: '8px 15px',
-                                    backgroundColor: '#28a745',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                📝 Register
-                            </button>
-                        </>
+                        <div style={{ display: 'inline-block', padding: '8px 15px', backgroundColor: '#dc3545', color: 'white', borderRadius: '4px' }}>
+                            ⚠️ Please login from main app to create events
+                        </div>
                     ) : (
                         <>
                             <button 
@@ -784,12 +800,15 @@ const MyCalendar = (props) => {
                     <div>{moment(currentDate).format(currentView === 'day' ? 'dddd, MMMM Do YYYY' : 'MMMM YYYY')}</div>
                     {currentUser && (
                         <div style={{ fontSize: '14px', color: '#28a745' }}>
-                            👤 {currentUser.username} {showUserEvents && '(My Events)'}
+                            👤 {currentUser.username} (ID: {currentUser.id}) {showUserEvents && '(My Events)'}
                         </div>
                     )}
                     <div style={{ fontSize: '12px', color: '#6c757d' }}>
                         {events.length} events loaded from database
                         {currentUser && ` • Events will be assigned to ${currentUser.username}`}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#28a745' }}>
+                        With User: {events.filter(e => e.userId).length} | Without User: {events.filter(e => !e.userId).length}
                     </div>
                 </div>
                 
