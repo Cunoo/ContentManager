@@ -8,16 +8,19 @@ import 'moment/locale/en-gb';
 moment.locale('en');
 const localizer = momentLocalizer(moment);
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// Updated to match your server URL and port
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
-// API functions
+// API functions updated for your server response format
 const api = {
     // Get all events from backend
     getEvents: async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/events`);
             if (!response.ok) throw new Error('Failed to fetch events');
-            return await response.json();
+            const data = await response.json();
+            // Your server returns { message: '...', events: [...], count: ... }
+            return data.events || [];
         } catch (error) {
             console.error('Error fetching events:', error);
             return [];
@@ -35,8 +38,13 @@ const api = {
                 body: JSON.stringify(eventData)
             });
             
-            if (!response.ok) throw new Error('Failed to create event');
-            return await response.json();
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create event');
+            }
+            const data = await response.json();
+            // Your server returns { message: '...', event: {...} }
+            return data.event;
         } catch (error) {
             console.error('Error creating event:', error);
             throw error;
@@ -54,8 +62,12 @@ const api = {
                 body: JSON.stringify(eventData)
             });
             
-            if (!response.ok) throw new Error('Failed to update event');
-            return await response.json();
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update event');
+            }
+            const data = await response.json();
+            return data.event;
         } catch (error) {
             console.error('Error updating event:', error);
             throw error;
@@ -69,7 +81,10 @@ const api = {
                 method: 'DELETE'
             });
             
-            if (!response.ok) throw new Error('Failed to delete event');
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete event');
+            }
             return true;
         } catch (error) {
             console.error('Error deleting event:', error);
@@ -106,6 +121,7 @@ const MyCalendar = (props) => {
         setLoading(true);
         try {
             const backendEvents = await api.getEvents();
+            console.log('Loaded events from server:', backendEvents);
 
             // Transformation backend data to calendar format
             const transformedEvents = backendEvents.map(event => ({
@@ -113,12 +129,15 @@ const MyCalendar = (props) => {
                 title: event.title,
                 start: new Date(event.start_time),
                 end: new Date(event.end_time),
-                resource: event.resource || 'point-in-time'
+                resource: event.resource || 'point-in-time',
+                description: event.description,
+                username: event.username // If event has associated user
             }));
             setEvents(transformedEvents);
+            console.log(`Successfully loaded ${transformedEvents.length} events`);
         } catch (error) {
-            console.error("failed to load events:", error);
-            alert('Failed to load events from server');
+            console.error("Failed to load events:", error);
+            alert('Failed to load events from server. Please make sure the server is running on http://127.0.0.1:5000');
         } finally {
             setLoading(false);
         }
@@ -129,35 +148,45 @@ const MyCalendar = (props) => {
         const title = window.prompt('New Event name');
         if (!title) return;
 
+        // Optional: Ask for description
+        const description = window.prompt('Event description (optional):') || '';
+
         setLoading(true);
         try {
-            // Prepare event data for backend
+            // Prepare event data for backend (matching your server's expected format)
             const eventData = {
                 title: title,
                 start_time: start.toISOString(),
-                end_time: end.toISOString(),
-                description: '',
+                end_time: start.toISOString(), // Same as start for point-in-time events
+                description: description,
                 resource: 'point-in-time'
+                // user_id can be added here if you have user authentication
             };
+
+            console.log('Sending event data to server:', eventData);
 
             // Send to backend
             const savedEvent = await api.createEvent(eventData);
+            console.log('Event saved to database:', savedEvent);
 
-            // Add to local state with backend ID
+            // Add to local state with backend data
             const newEvent = {
                 id: savedEvent.id,
                 title: savedEvent.title,
                 start: new Date(savedEvent.start_time),
                 end: new Date(savedEvent.end_time),
-                resource: savedEvent.resource
+                resource: savedEvent.resource,
+                description: savedEvent.description
             };
 
             setEvents([...events, newEvent]);
 
             const startTime = moment(start).format('h:mm A');
             console.log(`Event "${title}" saved to database at ${startTime}`);
+            alert(`Event "${title}" created successfully!`);
         } catch (error) {
-            alert('Failed to save event to database');
+            console.error('Error saving event:', error);
+            alert(`Failed to save event: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -165,7 +194,16 @@ const MyCalendar = (props) => {
 
     const handleSelectEvent = async (event) => {
         const startTime = moment(event.start).format('dddd, MMMM Do YYYY, h:mm A');
-        const action = window.confirm(`${event.title}\nTime: ${startTime}\n\nClick OK to delete, Cancel to keep`);
+        let eventDetails = `${event.title}\nTime: ${startTime}`;
+        
+        if (event.description) {
+            eventDetails += `\nDescription: ${event.description}`;
+        }
+        if (event.username) {
+            eventDetails += `\nCreated by: ${event.username}`;
+        }
+        
+        const action = window.confirm(`${eventDetails}\n\nClick OK to delete, Cancel to keep`);
         
         if (action) {
             setLoading(true);
@@ -173,8 +211,10 @@ const MyCalendar = (props) => {
                 await api.deleteEvent(event.id);
                 setEvents(events.filter(e => e.id !== event.id));
                 console.log(`Event "${event.title}" deleted from database`);
+                alert(`Event "${event.title}" deleted successfully!`);
             } catch (error) {
-                alert('Failed to delete event from database');
+                console.error('Error deleting event:', error);
+                alert(`Failed to delete event: ${error.message}`);
             } finally {
                 setLoading(false);
             }
@@ -199,6 +239,9 @@ const MyCalendar = (props) => {
         const time = window.prompt('Time (HH:MM in 24h format):', '09:00');
         if (!time) return;
 
+        // Optional: Ask for description
+        const description = window.prompt('Event description (optional):') || '';
+
         // Parse the inputs
         const [hours, minutes] = time.split(':').map(num => parseInt(num));
         
@@ -207,10 +250,9 @@ const MyCalendar = (props) => {
             return;
         }
 
-        // Validate time
-        const currentHour = getCurrentHour();
-        if (hours < currentHour || hours > 23 || minutes < 0 || minutes > 59) {
-            alert(`Invalid time. Hours should be ${currentHour}-23, minutes should be 0-59`);
+        // Validate time (removed current hour restriction for more flexibility)
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+            alert('Invalid time. Hours should be 0-23, minutes should be 0-59');
             return;
         }
 
@@ -224,12 +266,16 @@ const MyCalendar = (props) => {
                 title: title,
                 start_time: eventTime.toISOString(),
                 end_time: eventTime.toISOString(),
-                description: '',
+                description: description,
                 resource: 'point-in-time'
+                // user_id can be added here if you have user authentication
             };
+
+            console.log('Sending scheduled event data to server:', eventData);
 
             // Send to backend
             const savedEvent = await api.createEvent(eventData);
+            console.log('Scheduled event saved to database:', savedEvent);
 
             // Add to local state
             const newEvent = {
@@ -237,7 +283,8 @@ const MyCalendar = (props) => {
                 title: savedEvent.title,
                 start: new Date(savedEvent.start_time),
                 end: new Date(savedEvent.end_time),
-                resource: savedEvent.resource
+                resource: savedEvent.resource,
+                description: savedEvent.description
             };
 
             setEvents([...events, newEvent]);
@@ -246,12 +293,26 @@ const MyCalendar = (props) => {
             const timeFormatted = moment(eventTime).format('dddd, MMMM Do YYYY, h:mm A');
             alert(`Event "${title}" saved to database at: ${timeFormatted}`);
 
-            console.log('Event saved to database:', savedEvent);
-
         } catch (error) {
-            alert('Failed to save event to database');
+            console.error('Error saving scheduled event:', error);
+            alert(`Failed to save event: ${error.message}`);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Test server connection
+    const testServerConnection = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL.replace('/api', '')}/api/health`);
+            if (response.ok) {
+                const data = await response.json();
+                alert(`Server Status: ${data.status}\nDatabase: ${data.database}\nTime: ${data.timestamp}`);
+            } else {
+                throw new Error('Server not responding');
+            }
+        } catch (error) {
+            alert('Cannot connect to server. Please make sure your server is running on http://127.0.0.1:5000');
         }
     };
 
@@ -392,7 +453,7 @@ const MyCalendar = (props) => {
             {/* Loading overlay */}
             {loading && (
                 <div className="loading-overlay">
-                    <div>Saving to database...</div>
+                    <div>Connecting to database...</div>
                 </div>
             )}
 
@@ -437,6 +498,20 @@ const MyCalendar = (props) => {
                         }}
                     >
                         🔄 Refresh
+                    </button>
+                    <button 
+                        onClick={testServerConnection}
+                        style={{ 
+                            marginRight: '8px', 
+                            padding: '8px 15px',
+                            backgroundColor: '#17a2b8',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        🔍 Test Server
                     </button>
                     <button 
                         onClick={() => {
@@ -487,8 +562,11 @@ const MyCalendar = (props) => {
                     </button>
                 </div>
                 
-                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#495057' }}>
-                    {moment(currentDate).format(currentView === 'day' ? 'dddd, MMMM Do YYYY' : 'MMMM YYYY')}
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>
+                    <div>{moment(currentDate).format(currentView === 'day' ? 'dddd, MMMM Do YYYY' : 'MMMM YYYY')}</div>
+                    <div style={{ fontSize: '12px', color: '#6c757d' }}>
+                        {events.length} events loaded from database
+                    </div>
                 </div>
                 
                 <div>
