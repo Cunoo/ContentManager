@@ -59,7 +59,24 @@ const initDB = async () => {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Create events table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS events (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP NOT NULL,
+        description TEXT,
+        resource VARCHAR(100) DEFAULT 'point-in-time',
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('✅ Database initialized successfully');
+    console.log('✅ Users and Events tables ready');
   } catch (error) {
     console.error('❌ Error initializing database:', error.message);
     console.error('⚠️  Server will continue but database features won\'t work');
@@ -74,25 +91,57 @@ initDB();
 // Home route
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'User Registration API Server',
+    message: 'User Registration & Calendar API Server',
     status: 'Running ✅',
     endpoints: {
+      // User endpoints
       register: 'POST /api/register',
       login: 'POST /api/login',
       getAllUsers: 'GET /api/users',
       getUserById: 'GET /api/users/:id',
       updateUser: 'PUT /api/users/:id',
-      deleteUser: 'DELETE /api/users/:id'
+      deleteUser: 'DELETE /api/users/:id',
+      // Event endpoints
+      getAllEvents: 'GET /api/events',
+      getEventById: 'GET /api/events/:id',
+      createEvent: 'POST /api/events',
+      updateEvent: 'PUT /api/events/:id',
+      deleteEvent: 'DELETE /api/events/:id',
+      getEventsByDateRange: 'GET /api/events/range/:start/:end',
+      getUserEvents: 'GET /api/users/:userId/events',
+      // Health check
+      healthCheck: 'GET /api/health'
     }
   });
 });
 
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ 
+      status: 'healthy', 
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      server: 'User Registration & Calendar API',
+      version: '1.0.0'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'unhealthy', 
+      database: 'disconnected',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+// USER ROUTES
+
 // Register new user
 app.post('/api/register', async (req, res) => {
   try {
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body);
-    console.log('Content-Type:', req.get('Content-Type'));
+    console.log('Registration attempt:', { body: req.body, headers: req.headers['content-type'] });
     const { username, email, password } = req.body;
 
     // Validate input
@@ -200,6 +249,40 @@ app.get('/api/users', async (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get events for specific user (moved before /api/users/:id to avoid conflict)
+app.get('/api/users/:userId/events', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Check if user exists
+    const userCheck = await pool.query('SELECT id, username FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const query = `
+      SELECT * FROM events 
+      WHERE user_id = $1 
+      ORDER BY start_time ASC
+    `;
+    const result = await pool.query(query, [userId]);
+    
+    res.status(200).json({
+      message: 'User events retrieved successfully',
+      user: userCheck.rows[0],
+      events: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    res.status(500).json({ error: 'Failed to fetch user events' });
   }
 });
 
@@ -329,6 +412,214 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// EVENT ROUTES
+
+// Get events by date range (moved before /api/events/:id to avoid conflict)
+app.get('/api/events/range/:start/:end', async (req, res) => {
+  try {
+    const { start, end } = req.params;
+    const query = `
+      SELECT e.*, u.username 
+      FROM events e 
+      LEFT JOIN users u ON e.user_id = u.id 
+      WHERE e.start_time >= $1 AND e.end_time <= $2 
+      ORDER BY e.start_time ASC
+    `;
+    const result = await pool.query(query, [start, end]);
+    
+    res.status(200).json({
+      message: 'Events retrieved successfully',
+      events: result.rows,
+      count: result.rows.length,
+      dateRange: { start, end }
+    });
+  } catch (error) {
+    console.error('Error fetching events by range:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// Get all events
+app.get('/api/events', async (req, res) => {
+  try {
+    const query = `
+      SELECT e.*, u.username 
+      FROM events e 
+      LEFT JOIN users u ON e.user_id = u.id 
+      ORDER BY e.start_time ASC
+    `;
+    const result = await pool.query(query);
+    
+    res.status(200).json({
+      message: 'Events retrieved successfully',
+      events: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// Get single event by ID
+app.get('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+
+    const query = `
+      SELECT e.*, u.username 
+      FROM events e 
+      LEFT JOIN users u ON e.user_id = u.id 
+      WHERE e.id = $1
+    `;
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    res.status(200).json({
+      message: 'Event retrieved successfully',
+      event: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    res.status(500).json({ error: 'Failed to fetch event' });
+  }
+});
+
+// Create new event
+app.post('/api/events', async (req, res) => {
+  try {
+    console.log('Creating event:', req.body);
+    const { title, start_time, end_time, description, resource, user_id } = req.body;
+    
+    // Validation
+    if (!title || !start_time || !end_time) {
+      return res.status(400).json({ 
+        error: 'Title, start_time, and end_time are required' 
+      });
+    }
+
+    // Validate user_id if provided
+    if (user_id) {
+      const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [user_id]);
+      if (userCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid user_id' });
+      }
+    }
+
+    const query = `
+      INSERT INTO events (title, start_time, end_time, description, resource, user_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+    
+    const values = [
+      title,
+      start_time,
+      end_time,
+      description || '',
+      resource || 'point-in-time',
+      user_id || null
+    ];
+    
+    const result = await pool.query(query, values);
+    console.log('Event created successfully:', result.rows[0]);
+    
+    res.status(201).json({
+      message: 'Event created successfully',
+      event: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+// Update existing event
+app.put('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, start_time, end_time, description, resource, user_id } = req.body;
+    
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+
+    // Check if event exists
+    const checkQuery = 'SELECT id FROM events WHERE id = $1';
+    const checkResult = await pool.query(checkQuery, [id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Validate user_id if provided
+    if (user_id) {
+      const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [user_id]);
+      if (userCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid user_id' });
+      }
+    }
+
+    const query = `
+      UPDATE events 
+      SET title = COALESCE($1, title),
+          start_time = COALESCE($2, start_time),
+          end_time = COALESCE($3, end_time),
+          description = COALESCE($4, description),
+          resource = COALESCE($5, resource),
+          user_id = COALESCE($6, user_id),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $7
+      RETURNING *
+    `;
+    
+    const values = [title, start_time, end_time, description, resource, user_id, id];
+    const result = await pool.query(query, values);
+    
+    res.status(200).json({
+      message: 'Event updated successfully',
+      event: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({ error: 'Failed to update event' });
+  }
+});
+
+// Delete event
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid event ID' });
+    }
+
+    const query = 'DELETE FROM events WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    console.log('Event deleted successfully:', result.rows[0]);
+    res.status(200).json({
+      message: 'Event deleted successfully',
+      event: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
@@ -342,20 +633,41 @@ app.use(function(req, res) {
     message: `Cannot ${req.method} ${req.path}`,
     availableRoutes: [
       'GET /',
+      'GET /api/health',
+      // User routes
       'POST /api/register',
       'POST /api/login',
       'GET /api/users',
       'GET /api/users/:id',
       'PUT /api/users/:id',
-      'DELETE /api/users/:id'
+      'DELETE /api/users/:id',
+      'GET /api/users/:userId/events',
+      // Event routes
+      'GET /api/events',
+      'GET /api/events/:id',
+      'POST /api/events',
+      'PUT /api/events/:id',
+      'DELETE /api/events/:id',
+      'GET /api/events/range/:start/:end'
     ]
+  });
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down server...');
+  pool.end(() => {
+    console.log('Database connection closed');
+    process.exit(0);
   });
 });
 
 // Start server
 app.listen(PORT, '127.0.0.1', () => {
-  console.log(`🚀 User Registration API Server is running!`);
+  console.log(`🚀 User Registration & Calendar API Server is running!`);
   console.log(`📡 Server: http://127.0.0.1:${PORT}`);
   console.log(`📖 API Documentation: http://127.0.0.1:${PORT}`);
   console.log(`⏰ Started at: ${new Date().toLocaleString()}`);
+  console.log(`👥 User Management: Available`);
+  console.log(`📅 Calendar Events: Available`);
 });
