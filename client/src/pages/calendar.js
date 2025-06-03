@@ -93,7 +93,7 @@ const MyCalendar = (props) => {
 
     //load events from backend on component mount
     useEffect(() => {
-        loadEventsFromBackend();
+        loadEventsFromBackEnd();
     }, []);
 
     const loadEventsFromBackEnd = async () => {
@@ -113,6 +113,45 @@ const MyCalendar = (props) => {
         } catch (error) {
             console.error("failed to load events:", error);
             alert('Failed to load events from server');
+        } finally {
+            setLoading(false);
+        }
+    }
+    // enhanced event handler with backend integration
+    const handleSelectSlot = async ({ start, end}) => {
+        const title = window.prompt('New Event name');
+        if (!title) return;
+
+        setLoading(true);
+        try {
+            //prepare event data for backend
+            const eventData = {
+                title: title,
+                start_time: start.toISOString(),
+                end_time: start.toISOString(),
+                description: '',
+                resource: 'point-in-time'
+
+            };
+
+            //send to backend
+            const savedEvent = await api.createEvent(eventData);
+
+            //add to local state with backend ID
+            const newEvent = {
+                id: savedEvent.id,
+                title: savedEvent.title,
+                start: new Date(savedEvent.start_time),
+                end: new Date(savedEvent.end_time),
+                resources: savedEvent.resource
+            };
+
+            setEvents([...events, newEvent]);
+
+            const startTime = moment(start).format('h:mm A');
+            console.log(`Event "${title}" saved to database at ${startTime}`);
+        } catch (error) {
+            alert('Failed to save event to database');
         } finally {
             setLoading(false);
         }
