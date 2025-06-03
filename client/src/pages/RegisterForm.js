@@ -87,7 +87,7 @@ export default function RegisterForm() {
             value={formData.username}
             onChange={handleChange}
             required
-            className='text-white dark:bg-gray-700 p-2 rounded w-full'
+            className='text-white dark:bg-gray-700'
           />
         </div>
         <br />
@@ -102,7 +102,7 @@ export default function RegisterForm() {
             value={formData.email}
             onChange={handleChange}
             required
-            className='text-white dark:bg-gray-700 p-2 rounded w-full'
+            className='text-white dark:bg-gray-700'
           />
         </div>
         <br />
@@ -117,7 +117,7 @@ export default function RegisterForm() {
             value={formData.password}
             onChange={handleChange}
             required
-            className='text-white dark:bg-gray-700 p-2 rounded w-full'
+            className='text-white dark:bg-gray-700'
           />
         </div>
         <br />
@@ -133,7 +133,7 @@ export default function RegisterForm() {
             value={formData.confirmPassword}
             onChange={handleChange}
             required
-            className='text-white dark:bg-gray-700 p-2 rounded w-full'
+            className='text-white dark:bg-gray-700'
           />
           {!isMatch && (
             <p className="text-red-500 mt-1">Passwords do not match!</p>
