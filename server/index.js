@@ -644,10 +644,22 @@ app.use(function(req, res) {
   });
 });
 
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down server...');
+  pool.end(() => {
+    console.log('Database connection closed');
+    process.exit(0);
+  });
+});
+
+
 // Start server
 app.listen(PORT, '127.0.0.1', () => {
   console.log(`🚀 User Registration API Server is running!`);
   console.log(`📡 Server: http://127.0.0.1:${PORT}`);
   console.log(`📖 API Documentation: http://127.0.0.1:${PORT}`);
   console.log(`⏰ Started at: ${new Date().toLocaleString()}`);
+  console.log(`👥 User Management: Available`);
+  console.log(`📅 Calendar Events: Available`);
 });
