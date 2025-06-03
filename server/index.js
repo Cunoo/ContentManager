@@ -358,6 +358,41 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Create new event
+app.post('/api/events', async (req, res) => {
+  try {
+    const { title, start_time, end_time, description, resource } = req.body;
+    
+    // Validation
+    if (!title || !start_time || !end_time) {
+      return res.status(400).json({ 
+        error: 'Title, start_time, and end_time are required' 
+      });
+    }
+
+    const query = `
+      INSERT INTO events (title, start_time, end_time, description, resource)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+    
+    const values = [
+      title,
+      start_time,
+      end_time,
+      description || '',
+      resource || 'point-in-time'
+    ];
+    
+    const result = await pool.query(query, values);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+
 // 404 handler
 app.use(function(req, res) {
   res.status(404).json({ 
