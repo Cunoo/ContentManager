@@ -158,7 +158,23 @@ const MyCalendar = (props) => {
     }
 }
 
-
+const handleSelectEvent = async (event) => {
+    const startTime = moment(event.start).format('dddd, MMMM Do YYYY, h:mm A');
+    const action = window.confirm(`${event.title}\nTime: ${startTime}\n\nClick OK to delete, Cancel to keep`);
+    
+    if(action) {
+        setLoading(true);
+        try {
+            await api.deleteEvent(event.id);
+            setEvent(events.filter(e => e.id !== event.id));
+            console.log('Event "${event.title}" deleted from database');
+        } catch (error) {
+            alert('Failed to delete event from database');
+        } finally {
+            setLoading(false);
+        }
+    }
+}
 
 
 
