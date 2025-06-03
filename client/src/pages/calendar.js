@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {Calendar, momentLocalizer} from 'react-big-calendar';
+import { Calendar, momentLocalizer} from 'react-big-calendar';
 import moment from 'moment';
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -84,3 +84,46 @@ const api = {
         }
     }
 };
+
+const MyCalendar = (props) => {
+    const [events, setEvents] = useState([]);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentView, setCurrentView] = useState('day');
+    const [loading, setLoading] = useState(false);xw
+
+    //load events from backend on component mount
+    useEffect(() => {
+        loadEventsFromBackend();
+    }, []);
+
+    const loadEventsFromBackEnd = async () => {
+        setLoading(true);
+        try {
+            const backendEvents = await api.getEvents();
+
+            //transformation backend data to calendar format
+            const transformedEvents = backendEvents.map(event => ( {
+                id: event.id,
+                title: event.title,
+                start: new Date(event.start_time),
+                end: new Date(event.end_time),
+                resource: event.resource || 'point-in-time'
+            }));
+            setEvents(transformedEvents);
+        } catch (error) {
+            console.error("failed to load events:", error);
+            alert('Failed to load events from server');
+        } finally {
+            setLoading(false);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+export default MyCalendar;
