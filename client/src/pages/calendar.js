@@ -174,6 +174,13 @@ const handleSelectEvent = async (event) => {
             setLoading(false);
         }
     }
+    const handleNavigate = (newDate) => {
+        setCurrentDate(newDate);
+    };
+
+    const handleViewChange = (view) => {
+        setCurrentView(view);
+    };
 }
 
 
