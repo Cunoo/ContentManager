@@ -13,16 +13,73 @@ const API_BASE_URL = 'http://127.0.0.1:5000/api';
 
 // API functions updated for your server response format
 const api = {
+    // User Authentication APIs
+    register: async (userData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to register');
+            }
+            const data = await response.json();
+            return data.user;
+        } catch (error) {
+            console.error('Error registering user:', error);
+            throw error;
+        }
+    },
+
+    login: async (loginData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(loginData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to login');
+            }
+            const data = await response.json();
+            return data.user;
+        } catch (error) {
+            console.error('Error logging in:', error);
+            throw error;
+        }
+    },
+
     // Get all events from backend
     getEvents: async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/events`);
             if (!response.ok) throw new Error('Failed to fetch events');
             const data = await response.json();
-            // Your server returns { message: '...', events: [...], count: ... }
             return data.events || [];
         } catch (error) {
             console.error('Error fetching events:', error);
+            return [];
+        }
+    },
+
+    // Get events for specific user
+    getUserEvents: async (userId) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/${userId}/events`);
+            if (!response.ok) throw new Error('Failed to fetch user events');
+            const data = await response.json();
+            return data.events || [];
+        } catch (error) {
+            console.error('Error fetching user events:', error);
             return [];
         }
     },
@@ -43,7 +100,6 @@ const api = {
                 throw new Error(errorData.error || 'Failed to create event');
             }
             const data = await response.json();
-            // Your server returns { message: '...', event: {...} }
             return data.event;
         } catch (error) {
             console.error('Error creating event:', error);
@@ -98,6 +154,12 @@ const MyCalendar = (props) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [currentView, setCurrentView] = useState('day');
     const [loading, setLoading] = useState(false);
+    
+    // User authentication state
+    const [currentUser, setCurrentUser] = useState(null);
+    const [showUserEvents, setShowUserEvents] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
 
     // Helper functions
     const getCurrentHour = () => {
@@ -115,13 +177,20 @@ const MyCalendar = (props) => {
     // Load events from backend on component mount
     useEffect(() => {
         loadEventsFromBackEnd();
-    }, []);
+    }, [showUserEvents, currentUser]);
 
     const loadEventsFromBackEnd = async () => {
         setLoading(true);
         try {
-            const backendEvents = await api.getEvents();
-            console.log('Loaded events from server:', backendEvents);
+            let backendEvents;
+            
+            if (showUserEvents && currentUser) {
+                backendEvents = await api.getUserEvents(currentUser.id);
+                console.log(`Loaded ${backendEvents.length} events for user ${currentUser.username}`);
+            } else {
+                backendEvents = await api.getEvents();
+                console.log('Loaded all events from server:', backendEvents.length);
+            }
 
             // Transformation backend data to calendar format
             const transformedEvents = backendEvents.map(event => ({
@@ -131,7 +200,8 @@ const MyCalendar = (props) => {
                 end: new Date(event.end_time),
                 resource: event.resource || 'point-in-time',
                 description: event.description,
-                username: event.username // If event has associated user
+                username: event.username,
+                userId: event.user_id
             }));
             setEvents(transformedEvents);
             console.log(`Successfully loaded ${transformedEvents.length} events`);
@@ -143,31 +213,68 @@ const MyCalendar = (props) => {
         }
     };
 
-    // Enhanced event handler with backend integration
+    // Authentication functions
+    const handleLogin = async (loginData) => {
+        try {
+            setLoading(true);
+            const user = await api.login(loginData);
+            setCurrentUser(user);
+            setShowAuthModal(false);
+            console.log('User logged in:', user);
+            alert(`Welcome back, ${user.username}!`);
+        } catch (error) {
+            alert(`Login failed: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRegister = async (userData) => {
+        try {
+            setLoading(true);
+            const user = await api.register(userData);
+            setCurrentUser(user);
+            setShowAuthModal(false);
+            console.log('User registered:', user);
+            alert(`Welcome, ${user.username}! You have been registered successfully.`);
+        } catch (error) {
+            alert(`Registration failed: ${error.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLogout = () => {
+        setCurrentUser(null);
+        setShowUserEvents(false);
+        loadEventsFromBackEnd(); // Reload all events
+        alert('You have been logged out.');
+    };
+
+    // Enhanced event handler with user_id integration
     const handleSelectSlot = async ({ start, end }) => {
         const title = window.prompt('New Event name');
         if (!title) return;
 
-        // Optional: Ask for description
         const description = window.prompt('Event description (optional):') || '';
 
         setLoading(true);
         try {
-            // Prepare event data for backend (matching your server's expected format)
+            // Prepare event data for backend - NOW WITH USER_ID!
             const eventData = {
                 title: title,
                 start_time: start.toISOString(),
                 end_time: start.toISOString(), // Same as start for point-in-time events
                 description: description,
-                resource: 'point-in-time'
-                // user_id can be added here if you have user authentication
+                resource: 'point-in-time',
+                user_id: currentUser ? currentUser.id : null // AUTOMATICALLY ADD USER_ID!
             };
 
-            console.log('Sending event data to server:', eventData);
+            console.log('Sending event data to server with user_id:', eventData);
 
             // Send to backend
             const savedEvent = await api.createEvent(eventData);
-            console.log('Event saved to database:', savedEvent);
+            console.log('Event saved to database with user_id:', savedEvent);
 
             // Add to local state with backend data
             const newEvent = {
@@ -176,14 +283,16 @@ const MyCalendar = (props) => {
                 start: new Date(savedEvent.start_time),
                 end: new Date(savedEvent.end_time),
                 resource: savedEvent.resource,
-                description: savedEvent.description
+                description: savedEvent.description,
+                userId: savedEvent.user_id
             };
 
             setEvents([...events, newEvent]);
 
             const startTime = moment(start).format('h:mm A');
-            console.log(`Event "${title}" saved to database at ${startTime}`);
-            alert(`Event "${title}" created successfully!`);
+            const userInfo = currentUser ? ` (assigned to ${currentUser.username})` : ' (no user assigned)';
+            console.log(`Event "${title}" saved to database at ${startTime}${userInfo}`);
+            alert(`Event "${title}" created successfully${userInfo}!`);
         } catch (error) {
             console.error('Error saving event:', error);
             alert(`Failed to save event: ${error.message}`);
@@ -201,6 +310,10 @@ const MyCalendar = (props) => {
         }
         if (event.username) {
             eventDetails += `\nCreated by: ${event.username}`;
+        } else if (event.userId) {
+            eventDetails += `\nUser ID: ${event.userId}`;
+        } else {
+            eventDetails += `\nNo user assigned`;
         }
         
         const action = window.confirm(`${eventDetails}\n\nClick OK to delete, Cancel to keep`);
@@ -239,7 +352,6 @@ const MyCalendar = (props) => {
         const time = window.prompt('Time (HH:MM in 24h format):', '09:00');
         if (!time) return;
 
-        // Optional: Ask for description
         const description = window.prompt('Event description (optional):') || '';
 
         // Parse the inputs
@@ -250,7 +362,6 @@ const MyCalendar = (props) => {
             return;
         }
 
-        // Validate time (removed current hour restriction for more flexibility)
         if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
             alert('Invalid time. Hours should be 0-23, minutes should be 0-59');
             return;
@@ -261,21 +372,21 @@ const MyCalendar = (props) => {
 
         setLoading(true);
         try {
-            // Prepare data for backend
+            // Prepare data for backend - NOW WITH USER_ID!
             const eventData = {
                 title: title,
                 start_time: eventTime.toISOString(),
                 end_time: eventTime.toISOString(),
                 description: description,
-                resource: 'point-in-time'
-                // user_id can be added here if you have user authentication
+                resource: 'point-in-time',
+                user_id: currentUser ? currentUser.id : null // AUTOMATICALLY ADD USER_ID!
             };
 
-            console.log('Sending scheduled event data to server:', eventData);
+            console.log('Sending scheduled event data to server with user_id:', eventData);
 
             // Send to backend
             const savedEvent = await api.createEvent(eventData);
-            console.log('Scheduled event saved to database:', savedEvent);
+            console.log('Scheduled event saved to database with user_id:', savedEvent);
 
             // Add to local state
             const newEvent = {
@@ -284,14 +395,16 @@ const MyCalendar = (props) => {
                 start: new Date(savedEvent.start_time),
                 end: new Date(savedEvent.end_time),
                 resource: savedEvent.resource,
-                description: savedEvent.description
+                description: savedEvent.description,
+                userId: savedEvent.user_id
             };
 
             setEvents([...events, newEvent]);
 
             // Show confirmation
             const timeFormatted = moment(eventTime).format('dddd, MMMM Do YYYY, h:mm A');
-            alert(`Event "${title}" saved to database at: ${timeFormatted}`);
+            const userInfo = currentUser ? ` (assigned to ${currentUser.username})` : ' (no user assigned)';
+            alert(`Event "${title}" saved to database at: ${timeFormatted}${userInfo}`);
 
         } catch (error) {
             console.error('Error saving scheduled event:', error);
@@ -314,6 +427,34 @@ const MyCalendar = (props) => {
         } catch (error) {
             alert('Cannot connect to server. Please make sure your server is running on http://127.0.0.1:5000');
         }
+    };
+
+    // Quick login for testing (you can remove this in production)
+    const handleQuickLogin = () => {
+        const username = window.prompt('Enter username to login:');
+        if (!username) return;
+        
+        const password = window.prompt('Enter password:');
+        if (!password) return;
+
+        handleLogin({ login: username, password });
+    };
+
+    // Quick register for testing (you can remove this in production)
+    const handleQuickRegister = () => {
+        const username = window.prompt('Enter new username:');
+        if (!username) return;
+        
+        const email = window.prompt('Enter email:');
+        if (!email) return;
+        
+        const password = window.prompt('Enter password (min 6 characters):');
+        if (!password || password.length < 6) {
+            alert('Password must be at least 6 characters long');
+            return;
+        }
+
+        handleRegister({ username, email, password });
     };
 
     return (
@@ -447,6 +588,17 @@ const MyCalendar = (props) => {
                     color: white;
                     font-size: 18px;
                 }
+
+                /* User events styling */
+                .user-event {
+                    background-color: #28a745 !important;
+                    border-color: #28a745 !important;
+                }
+
+                .anonymous-event {
+                    background-color: #6c757d !important;
+                    border-color: #6c757d !important;
+                }
                 `}
             </style>
             
@@ -499,6 +651,72 @@ const MyCalendar = (props) => {
                     >
                         🔄 Refresh
                     </button>
+                    
+                    {/* User Authentication Buttons */}
+                    {!currentUser ? (
+                        <>
+                            <button 
+                                onClick={handleQuickLogin}
+                                style={{ 
+                                    marginRight: '8px', 
+                                    padding: '8px 15px',
+                                    backgroundColor: '#007bff',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                👤 Login
+                            </button>
+                            <button 
+                                onClick={handleQuickRegister}
+                                style={{ 
+                                    marginRight: '8px', 
+                                    padding: '8px 15px',
+                                    backgroundColor: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                📝 Register
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button 
+                                onClick={() => setShowUserEvents(!showUserEvents)}
+                                style={{ 
+                                    marginRight: '8px', 
+                                    padding: '8px 15px',
+                                    backgroundColor: showUserEvents ? '#dc3545' : '#17a2b8',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {showUserEvents ? 'Show All Events' : 'My Events Only'}
+                            </button>
+                            <button 
+                                onClick={handleLogout}
+                                style={{ 
+                                    marginRight: '8px', 
+                                    padding: '8px 15px',
+                                    backgroundColor: '#dc3545',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                🚪 Logout
+                            </button>
+                        </>
+                    )}
+                    
                     <button 
                         onClick={testServerConnection}
                         style={{ 
@@ -564,8 +782,14 @@ const MyCalendar = (props) => {
                 
                 <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#495057', textAlign: 'center' }}>
                     <div>{moment(currentDate).format(currentView === 'day' ? 'dddd, MMMM Do YYYY' : 'MMMM YYYY')}</div>
+                    {currentUser && (
+                        <div style={{ fontSize: '14px', color: '#28a745' }}>
+                            👤 {currentUser.username} {showUserEvents && '(My Events)'}
+                        </div>
+                    )}
                     <div style={{ fontSize: '12px', color: '#6c757d' }}>
                         {events.length} events loaded from database
+                        {currentUser && ` • Events will be assigned to ${currentUser.username}`}
                     </div>
                 </div>
                 
@@ -622,6 +846,18 @@ const MyCalendar = (props) => {
                 showMultiDayTimes
                 popup
                 toolbar={false}
+                eventPropGetter={(event) => ({
+                    className: event.userId ? 'user-event' : 'anonymous-event',
+                    style: event.userId ? {
+                        backgroundColor: '#28a745',
+                        borderColor: '#28a745',
+                        color: 'white'
+                    } : {
+                        backgroundColor: '#6c757d',
+                        borderColor: '#6c757d',
+                        color: 'white'
+                    }
+                })}
                 formats={{
                     timeGutterFormat: 'h:mm A',
                     dayHeaderFormat: (date, culture, localizer) => {
