@@ -3,8 +3,7 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// Import moment locales if needed
-import 'moment/locale/en-gb'; // or your preferred locale
+import 'moment/locale/en-gb'; 
 
 // Setup the localizer by providing the moment Object
 moment.locale('en'); // Set default locale
@@ -250,7 +249,7 @@ const MyCalendar = (props) => {
         justifyContent: 'space-between', 
         alignItems: 'center', 
         padding: '15px',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#191d23',
         borderBottom: '2px solid #dee2e6',
         marginBottom: '10px'
       }}>
@@ -260,8 +259,8 @@ const MyCalendar = (props) => {
             style={{ 
               marginRight: '8px', 
               padding: '8px 15px',
-              backgroundColor: '#ffc107',
-              color: '#212529',
+              backgroundColor: '#282c34',
+              color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -278,7 +277,7 @@ const MyCalendar = (props) => {
             style={{ 
               marginRight: '8px', 
               padding: '8px 15px',
-              backgroundColor: '#007bff',
+              backgroundColor: '#282c34',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -292,7 +291,7 @@ const MyCalendar = (props) => {
             style={{ 
               marginRight: '8px', 
               padding: '8px 15px',
-              backgroundColor: '#28a745',
+              backgroundColor: '#282c34',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -308,7 +307,7 @@ const MyCalendar = (props) => {
             }} 
             style={{ 
               padding: '8px 15px',
-              backgroundColor: '#007bff',
+              backgroundColor: '#282c34',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -329,7 +328,7 @@ const MyCalendar = (props) => {
             style={{ 
               marginRight: '8px', 
               padding: '8px 15px',
-              backgroundColor: currentView === 'day' ? '#dc3545' : '#6c757d',
+              backgroundColor: currentView === 'day' ? '#6c757d' : '#282c34',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -342,7 +341,7 @@ const MyCalendar = (props) => {
             onClick={() => setCurrentView('week')} 
             style={{ 
               padding: '8px 15px',
-              backgroundColor: currentView === 'week' ? '#dc3545' : '#6c757d',
+              backgroundColor: currentView === 'week' ? '#6c757d' : '#282c34',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
