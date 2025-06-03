@@ -115,7 +115,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check endpoint (moved before other routes for priority)
+// Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
