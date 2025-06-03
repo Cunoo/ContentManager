@@ -25,13 +25,17 @@ function Header() {
           Home
         </button>
       </Link>
-            <Link to="/calendar">
-        <button
-          className=" absolute top-0  m-4 text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
-        >
-          Calendar
-        </button>
-      </Link>
+      
+      {/* Only show Calendar button if user is logged in */}
+      {currentUser && (
+        <Link to="/calendar">
+          <button
+            className="absolute top-0 m-4 text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
+          >
+            Calendar
+          </button>
+        </Link>
+      )}
 
       {currentUser ? (
         <div className="absolute top-0 right-0 m-4 flex gap-2">
@@ -88,11 +92,18 @@ function Home() {
           <h3 className="text-2xl text-green-400 mb-4">
             Welcome back, {currentUser.username}!
           </h3>
-          <Link to="/profile">
-            <button className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-md">
-              View Your Profile
-            </button>
-          </Link>
+          <div className="space-x-4">
+            <Link to="/profile">
+              <button className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-md">
+                View Your Profile
+              </button>
+            </Link>
+            <Link to="/calendar">
+              <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md">
+                Open Calendar
+              </button>
+            </Link>
+          </div>
         </div>
       )}
     </div>
@@ -109,11 +120,15 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterForm/>} />
-            <Route path="/calendar" element={<Calendar />} />
+            {/* Protected Calendar Route */}
+            <Route path="/calendar" element={
+              <PrivateRoute>
+                <Calendar />
+              </PrivateRoute>
+            } />
             <Route path="/profile" element={
               <PrivateRoute>
                 <Profile />
-                
               </PrivateRoute>
             } />
           </Routes>
