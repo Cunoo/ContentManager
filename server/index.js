@@ -428,6 +428,42 @@ app.put('/api/events/:id', async (req, res) => {
   }
 });
 
+// Delete event
+app.delete('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const query = 'DELETE FROM events WHERE id = $1 RETURNING id';
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
+// Get events by date range
+app.get('/api/events/range/:start/:end', async (req, res) => {
+  try {
+    const { start, end } = req.params;
+    const query = `
+      SELECT * FROM events 
+      WHERE start_time >= $1 AND end_time <= $2 
+      ORDER BY start_time ASC
+    `;
+    const result = await pool.query(query, [start, end]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching events by range:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
 // 404 handler
 app.use(function(req, res) {
   res.status(404).json({ 
