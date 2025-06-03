@@ -392,6 +392,41 @@ app.post('/api/events', async (req, res) => {
   }
 });
 
+// Update existing event
+app.put('/api/events/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, start_time, end_time, description, resource } = req.body;
+    
+    // Check if event exists
+    const checkQuery = 'SELECT id FROM events WHERE id = $1';
+    const checkResult = await pool.query(checkQuery, [id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const query = `
+      UPDATE events 
+      SET title = COALESCE($1, title),
+          start_time = COALESCE($2, start_time),
+          end_time = COALESCE($3, end_time),
+          description = COALESCE($4, description),
+          resource = COALESCE($5, resource),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING *
+    `;
+    
+    const values = [title, start_time, end_time, description, resource, id];
+    const result = await pool.query(query, values);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({ error: 'Failed to update event' });
+  }
+});
 
 // 404 handler
 app.use(function(req, res) {
