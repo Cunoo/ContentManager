@@ -10,6 +10,7 @@ import RegisterForm from './pages/RegisterForm';
 import Profile from './components/Profile';
 import PrivateRoute from './components/PrivateRoute';
 import Calendar from './pages/calendar';
+import ManagePost from './pages/Posts';
 
 function Header() {
   const { currentUser, logout } = useContext(AuthContext);
@@ -20,9 +21,17 @@ function Header() {
       
       <Link to="/">
         <button
-          className="absolute top-0 left-16 m-4 px-8 padding-8 text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
+          className="absolute top-0 left-16 m-4 px-4 padding-8 text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
         >
           Home
+        </button>
+      </Link>
+
+      <Link to="/ManagePosts">
+        <button
+          className=" top-0 left-48 m-4 absolute  text-gray-900 hover:text-white border border-gray-800 hover:bg-gray-900 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:border-gray-600 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-gray-800"
+        >
+          ManagePosts
         </button>
       </Link>
       
@@ -120,6 +129,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterForm/>} />
+            <Route path="/ManagePosts" element={<ManagePost/>} />
             {/* Protected Calendar Route */}
             <Route path="/calendar" element={
               <PrivateRoute>
