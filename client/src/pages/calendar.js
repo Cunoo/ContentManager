@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useContext} from 'react';
+import React, {useState, useEffect, useContext, useCallback} from 'react';
 import { Calendar, momentLocalizer} from 'react-big-calendar';
 import moment from 'moment';
 import { AuthContext } from '../context/AuthContext'; // Import your AuthContext
@@ -148,39 +148,11 @@ const MyCalendar = (props) => {
     const [loading, setLoading] = useState(false);
     const [showUserEvents, setShowUserEvents] = useState(false);
 
-    // 🔧 USE AUTH CONTEXT INSTEAD OF LOCAL STATE
-    const { currentUser, login, logout } = useContext(AuthContext);
+    // 🔧 USE AUTH CONTEXT - REMOVED UNUSED 'login'
+    const { currentUser, logout } = useContext(AuthContext);
 
-    // Debug current user state whenever it changes
-    useEffect(() => {
-        console.log('=== 👤 USER STATE CHANGE (FROM CONTEXT) ===');
-        console.log('Current user:', currentUser);
-        console.log('User ID:', currentUser?.id);
-        console.log('User ID type:', typeof currentUser?.id);
-        console.log('Username:', currentUser?.username);
-        console.log('Show user events:', showUserEvents);
-        console.log('=== END USER STATE ===');
-    }, [currentUser, showUserEvents]);
-
-    // Helper functions
-    const getCurrentHour = () => {
-        return new Date().getHours();
-    };
-
-    const getMinTime = () => {
-        return new Date(2024, 0, 1, 7, 0, 0); // 7:00 AM
-    };
-
-    const getMaxTime = () => {
-        return new Date(2024, 0, 1, 22, 0, 0); // 10:00 PM
-    };
-
-    // Load events from backend on component mount
-    useEffect(() => {
-        loadEventsFromBackEnd();
-    }, [showUserEvents, currentUser]);
-
-    const loadEventsFromBackEnd = async () => {
+    // 🔧 FIXED: Moved loadEventsFromBackEnd to useCallback to fix dependency warning
+    const loadEventsFromBackEnd = useCallback(async () => {
         console.log('=== 🔄 LOADING EVENTS ===');
         console.log('Show user events:', showUserEvents);
         console.log('Current user:', currentUser);
@@ -225,7 +197,32 @@ const MyCalendar = (props) => {
         } finally {
             setLoading(false);
         }
+    }, [showUserEvents, currentUser]); // Added dependencies
+
+    // Debug current user state whenever it changes
+    useEffect(() => {
+        console.log('=== 👤 USER STATE CHANGE (FROM CONTEXT) ===');
+        console.log('Current user:', currentUser);
+        console.log('User ID:', currentUser?.id);
+        console.log('User ID type:', typeof currentUser?.id);
+        console.log('Username:', currentUser?.username);
+        console.log('Show user events:', showUserEvents);
+        console.log('=== END USER STATE ===');
+    }, [currentUser, showUserEvents]);
+
+    // Helper functions
+    const getMinTime = () => {
+        return new Date(2024, 0, 1, 7, 0, 0); // 7:00 AM
     };
+
+    const getMaxTime = () => {
+        return new Date(2024, 0, 1, 22, 0, 0); // 10:00 PM
+    };
+
+    // 🔧 FIXED: Now includes loadEventsFromBackEnd in dependency array properly
+    useEffect(() => {
+        loadEventsFromBackEnd();
+    }, [loadEventsFromBackEnd]);
 
     // 🔧 SIMPLIFIED LOGOUT - USE CONTEXT
     const handleLogout = () => {
