@@ -59,7 +59,22 @@ const initDB = async () => {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
+        // Create events table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS events (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP NOT NULL,
+        description TEXT,
+        resource VARCHAR(100) DEFAULT 'point-in-time',
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
     console.log('✅ Database initialized successfully');
+    console.log('✅ Users and Events tables ready');
   } catch (error) {
     console.error('❌ Error initializing database:', error.message);
     console.error('⚠️  Server will continue but database features won\'t work');
@@ -82,7 +97,15 @@ app.get('/', (req, res) => {
       getAllUsers: 'GET /api/users',
       getUserById: 'GET /api/users/:id',
       updateUser: 'PUT /api/users/:id',
-      deleteUser: 'DELETE /api/users/:id'
+      deleteUser: 'DELETE /api/users/:id',
+      // Event endpoints
+      getAllEvents: 'GET /api/events',
+      getEventById: 'GET /api/events/:id',
+      createEvent: 'POST /api/events',
+      updateEvent: 'PUT /api/events/:id',
+      deleteEvent: 'DELETE /api/events/:id',
+      getEventsByDateRange: 'GET /api/events/range/:start/:end',
+      getUserEvents: 'GET /api/users/:userId/events'
     }
   });
 });
