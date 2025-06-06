@@ -8,7 +8,7 @@ const defaultImage = '/images/uploadImage.png'
 const FileUploader = () => {
     const [message, setMessage] = useState("Welcome");
     const [selectedFile, setSelectedFile] = useState(defaultImage);
-    const [file, setFiles] = useState([]);
+    const [files, setFiles] = useState([]);
     const [isDragOver, setIsDragOver] = useState(null);
     const [uploading, setUpLoading] = useState(null);
     const fileInputRef = useRef(null);
@@ -33,6 +33,8 @@ const FileUploader = () => {
 
     const handleDrop = (e) => {
         e.preventDefault();
+        setIsDragOver(false);
+        handleFileSelect(e.dataTransfer.files);
     }
 
     const handleDragOver = (e) => {
@@ -47,6 +49,33 @@ const FileUploader = () => {
 
     const removeFile = (id) => {
         setFiles(prev => prev.filter(f => f.id !== id));
+    }
+
+    //upload a file
+    const uploadFiles = async () => {
+        setUpLoading(true);
+
+        for (let fileObj of files) {
+            if(fileObj.status !== 'ready') continue;
+            // update status to uploading
+            setFiles(prev => prev.map( f => f.id === fileObj.id ? {...f, status: 'uploading'} : f
+
+            ));
+
+
+            //progress
+            for (let progress = 0; progress <= 100; progress += 10){
+                setFiles(prev => prev.map(f =>
+                    f.id === fileObj.id ? {...f, progress} : f
+                ));
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            //success
+            setFiles(prev => prev.map(f => f.id === fileObj.id ?
+                {...f, status: 'success', progress: 100} : f
+            ));
+        }
     }
     
     return (
