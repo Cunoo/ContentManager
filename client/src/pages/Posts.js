@@ -78,6 +78,25 @@ const FileUploader = () => {
         }
     }
     
+    //status bar colors
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'uploading': return 'text-blue-600';
+            case 'success': return 'text-green-600';
+            case 'error': return 'text-red-600';
+            default: return 'text-gray-600';
+        }
+    }
+    
+    const getStatusText = (status) => {
+    switch (status) {
+        case 'uploading': return 'Nahráva sa...';
+        case 'success': return 'Nahraný';
+        case 'error': return 'Chyba';
+        default: return 'Pripravený';
+    }
+};
+    
     return (
         <div>
             <h2> Current message: {message}</h2>
