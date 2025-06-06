@@ -1,4 +1,8 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useContext} from 'react';
+import { AuthContext } from '../context/AuthContext';
+
+
+
 
 const defaultImage = '/images/uploadImage.png'
 const FileUploader = () => {
@@ -9,16 +13,42 @@ const FileUploader = () => {
     const [uploading, setUpLoading] = useState(null);
     const fileInputRef = useRef(null);
 
+    const { currentUser, logout } = useContext(AuthContext);
+
     const handleFileSelect = (selectedFiles) => {
         const fileArray = Array.from(selectedFiles);
-        const newFiles = fileArray.map(file => ({
+        const newFiles = fileArray.map(file => ({ // create object for every picture
             file,
-            id: Date.now() + Math.random() , // should be instead of math.random ID of person
+            id: Date.now() + currentUser ,
             progress: 0,
             status: 'ready'
         }));
         setFiles(prev =>  [...prev, ...newFiles]);
     }
+
+    //handlers
+    const handleFileInputChange = (e) => {
+        handleFileSelect(e.target.files);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+    }
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    }
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    }
+
+    const removeFile = (id) => {
+        setFiles(prev => prev.filter(f => f.id !== id));
+    }
+    
     return (
         <div>
             <h2> Current message: {message}</h2>
