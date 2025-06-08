@@ -10,6 +10,8 @@ const FileUploader = () => {
     const [uploading, setUpLoading] = useState(null);
     const fileInputRef = useRef(null);
 
+    const [description, setDescription] = useState('');
+
     const { currentUser, logout } = useContext(AuthContext);
 
     const handleFileSelect = (selectedFiles) => {
@@ -94,9 +96,19 @@ const FileUploader = () => {
             default: return 'Pripravený';
         }
     };
+
+    //br tags
+    const MultipleBreaks = ({count=1}) =>{
+        const breaks = [];
+        for (let i = 0; i < count; i++){
+            breaks.push(<br key={i} />);
+        }
+        return breaks
+    }
     
     return (
-        <div className="max-w-2xl mx-auto p-6 bg-gray-900 text-white rounded-lg shadow-lg">
+        
+        <div className="max-w-2xl mx-auto p-6 bg-gray-900 text-white rounded-lg shadow-lg mt-6 md:mt-12">            
             <h2 className="text-2xl font-bold mb-6 text-white">Upload a file</h2>
             
             {/* drop zone */}
@@ -197,8 +209,24 @@ const FileUploader = () => {
                             Vymazať všetko
                         </button>
                     </div>
+                    
                 </div>
+                
             )}
+            <MultipleBreaks count={5}/>
+            
+            <div class="mb-6">
+                <label for="large-input" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Description of posts</label>
+                <input
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder='type a description of the photo' 
+                    id="large-input"
+                    class="block w-full p-4 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-base focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                />
+            </div>
+
         </div>
     );
 };
