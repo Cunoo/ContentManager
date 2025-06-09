@@ -75,7 +75,7 @@ const FileUploader = () => {
             ));
         }
         
-        setUpLoading(false); // PRIDANÉ: reset uploading state
+        setUpLoading(false); // reset uploading state
     }
     
     //status bar colors
@@ -90,10 +90,10 @@ const FileUploader = () => {
 
     const getStatusText = (status) => {
         switch (status) {
-            case 'uploading': return 'Nahráva sa...';
-            case 'success': return 'Nahraný';
-            case 'error': return 'Chyba';
-            default: return 'Pripravený';
+            case 'uploading': return 'Uploading...';
+            case 'success': return 'Uploaded';
+            case 'error': return 'error';
+            default: return 'Ready';
         }
     };
 
@@ -130,7 +130,7 @@ const FileUploader = () => {
                         Drag&Drop files or click for select a file
                     </p>
                     <p className="text-sm text-gray-500">
-                        Supported formáty: PDF, JPG, PNG
+                        Supported formats: PDF, JPG, PNG
                     </p>
                 </div>
             </div>
@@ -147,7 +147,7 @@ const FileUploader = () => {
             {/* Array of files*/}
             {files.length > 0 && (
                 <div className="mt-6">
-                    <h3 className="text-lg font-semibold mb-3">Vybrané súbory ({files.length})</h3>
+                    <h3 className="text-lg font-semibold mb-3">Selected files ({files.length})</h3>
                     <div className="space-y-3">
                         {files.map((fileObj) => (
                             <div key={fileObj.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -197,7 +197,7 @@ const FileUploader = () => {
                                        hover:bg-blue-700 disabled:bg-gray-400
                                        disabled:cursor-not-allowed"
                         >
-                            {uploading ? 'Nahráva sa...' : 'Nahrať všetky súbory'}
+                            {uploading ? 'Uploading...' : 'Upload all files'}
                         </button>
                         <button
                             onClick={() => setFiles([])}
@@ -206,7 +206,7 @@ const FileUploader = () => {
                                        hover:bg-gray-300 disabled:bg-gray-100
                                        disabled:cursor-not-allowed"
                         >
-                            Vymazať všetko
+                            Delete everything
                         </button>
                     </div>
                     
